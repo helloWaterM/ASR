@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <cstring>
 #include <cstdlib>
 #include <stdint.h>
 #include <cmath>
@@ -12,7 +13,7 @@ using namespace std;
 struct WavData {
 public:
 	int16_t *data;
-	int32_t pointSize; //ï¿½ï¿½ï¿½Ýµï¿½Ä¸ï¿½ï¿½ï¿½
+	int32_t pointSize; //Êý¾ÝµãµÄ¸öÊý
 	
 	int32_t size;
 	int16_t format_tag, channels, block_align, bits_per_sample;
@@ -60,7 +61,7 @@ void writeWavFile(const char * fname, WavData * spFile){
 		fwrite(&spFile->bits_per_sample, sizeof(int16_t), 1, fp);
 		fwrite("data", sizeof(char), 4, fp);
 		fwrite(&spFile->data_size, sizeof(int16_t), 2, fp);
-		//Ð´ï¿½ï¿½dataï¿½ï¿½ï¿½ï¿½
+		//Ð´ÈëdataÊý¾Ý
 		for(int i = 0; i < spFile->pointSize; i++){
 			unsigned char head = spFile->data[i] & 0xff00 >>8;
 			unsigned char tail = spFile->data[i] & 0x00ff;
@@ -100,8 +101,8 @@ void loadWavFile(const char* fname, WavData *spFile) {
 				fread(&bits_per_sample, sizeof(int16_t), 1, fp);	
 				fread(id, sizeof(char), 4, fp);
 				fread(&data_size, sizeof(int16_t), 2, fp);
-				spFile->pointSize = data_size / (bits_per_sample / 8);  //ï¿½Ð¶ï¿½ï¿½Ù¸ï¿½ï¿½ï¿½ï¿½ï¿½
-				// ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½Ë¿Õ¼ä£¬ï¿½Çµï¿½Òªï¿½Í·ï¿½
+				spFile->pointSize = data_size / (bits_per_sample / 8);  //ÓÐ¶àÉÙ¸ö²ÉÑù
+				// ¶¯Ì¬·ÖÅäÁË¿Õ¼ä£¬¼ÇµÃÒªÊÍ·Å
 				spFile->data = (int16_t*)malloc(data_size);
 				unsigned char * buffers = (unsigned char *)malloc(spFile->pointSize * bits_per_sample);				
 				fread(buffers, sizeof(unsigned char), spFile->pointSize * 2, fp);
@@ -150,12 +151,12 @@ void freeSource(WavData* data) {
 
 int processSpeech(WavData& speechAudio) {
 	int frameLen = 8000 / 1000 * 25; // 25ms Îª1Ö¡ 
-	int frameStepLen = 8000 / 1000 * 10; // 10msï¿½ï¿½Ò»ï¿½ï¿½Ö¡ 
+	int frameStepLen = 8000 / 1000 * 10; // 10ms·ÖÒ»´ÎÖ¡ 
 	int frameNum = (speechAudio.pointSize - frameLen) / frameStepLen + 1;
 
 	
 
-	if ((speechAudio.pointSize - frameLen) % frameStepLen != 0) { //ï¿½ï¿½ï¿½ï¿½Ð²ï¿½È«ï¿½ï¿½Ö¡ 
+	if ((speechAudio.pointSize - frameLen) % frameStepLen != 0) { //×îºó»¹ÓÐ²»È«µÄÖ¡ 
 		frameNum += 1;
 	}
 	vector<double> meanEnergys(frameNum, 0.0);
@@ -199,32 +200,32 @@ vector<pair<int, int> > cutFrame(vector<double>  &Energys, vector<double> & zero
 	}
 	meanEnergy = allEnergy / frameNum * 1000;
 	meanZero = allZero / frameNum;
-	cout <<"ï¿½ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½:" << meanEnergy<<endl;
-	cout <<"ï¿½ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ " << meanZero << endl;
+	cout <<"ÓïÒôÆ½¾ùÄÜÁ¿:" << meanEnergy<<endl;
+	cout <<"ÓïÒôÆ½¾ù¹ýÁãÂÊ " << meanZero << endl;
 	double energyThreshold = 2.4864e+008 * 1.5;
 	double zeroCroThreshold = 0.388074 ;
 	
-	// Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¹ï¿½ï¿½ï¿½ï¿½Ê»ï¿½ï¿½Ö³ï¿½ï¿½ï¿½ï¿½ï¿½ 
-	vector<int> isSilence(frameNum, 0); //ï¿½ï¿½Â¼ï¿½Ç·ï¿½Îªï¿½ï¿½ï¿½ï¿½Ö¡ 
+	// Ê¹ÓÃÄÜÁ¿ºÍ¹ýÁãÂÊ»®·Ö³ö¾²Òô 
+	vector<int> isSilence(frameNum, 0); //¼ÇÂ¼ÊÇ·ñÎª¾²ÒôÖ¡ 
 	for(int i = 0; i < frameNum; i++){
 		if(Energys[i] < energyThreshold && zeroCroRates[i] < zeroCroThreshold){
 			isSilence[i] = 1;
-		//	cout << "ï¿½ï¿½ï¿½ï¿½ï¿½ "<<i <<endl;
+		//	cout << "¾²Òô¶Î "<<i <<endl;
 		}
 	}
 	
-	//ï¿½ï¿½ï¿½ï¿½50Ö¡ï¿½ï¿½ï¿½ï¿½40Ö¡Îªsilence, ï¿½ï¿½Ã´ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½,
+	//¼ÙÉè50Ö¡ÖÐÓÐ40Ö¡Îªsilence, ÄÇÃ´¾ÍÅÐ¶¨Õû¶ÎÎª¾²Òô¶Î,
 	int silNumThreshold = 48; 
 	int silNumFrameThre = 50;
 	
 	
 	int silVal = 0;
 	int silHead, silTail;
-	bool silStarted = false; //Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¬ï¿½ï¿½ï¿½Ç·ï¿½Ê¼ 
+	bool silStarted = false; //Ò»¸ö¾²ÒôÆ¬¶ÎÊÇ·ñ¿ªÊ¼ 
 	for(int i = 0; i < silNumFrameThre; i++){
 		silVal += isSilence[i];	
 	}
-	//ï¿½ï¿½Ê¼ï¿½ï¿½ 
+	//³õÊ¼»¯ 
 	if(silVal >= silNumThreshold){
 		if(silStarted == false){
 			silHead = 0;
@@ -238,7 +239,7 @@ vector<pair<int, int> > cutFrame(vector<double>  &Energys, vector<double> & zero
 	for(int i = 1; i < frameNum - silNumFrameThre + 1; i++){
 		silVal += isSilence[i + silNumFrameThre -1];
 		silVal -= isSilence[i - 1];  
-		if(silVal >= silNumThreshold){ //ï¿½Ð¶ï¿½Îªï¿½ï¿½ï¿½ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
+		if(silVal >= silNumThreshold){ //ÅÐ¶¨Îª¾²Òô¶ÎµÄÇé¿öÏÂ 
 			if(silStarted == false){
 				silHead = i;
 				silStarted = true;
@@ -247,10 +248,10 @@ vector<pair<int, int> > cutFrame(vector<double>  &Energys, vector<double> & zero
 				silTail = i;
 			}
 		}
-		else{  //ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½ 
-			if(silStarted == true){ //Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ 
+		else{  //Èç¹ûÅÐ¶¨²»ÊÇ¾²Òô¶Î 
+			if(silStarted == true){ //Ç°ÎÄÓÐÅÐ¶¨Îª¾²Òô¶Î 
 				silStarted = false;
-				cout <<"ï¿½ï¿½ï¿½ï¿½ï¿½:" << silHead << " ; " << silTail<<endl; 
+				cout <<"¾²Òô¶Î:" << silHead << " ; " << silTail<<endl; 
 				cutResult.push_back(pair<int, int> (silHead, silTail));
 			}
 		}
@@ -263,7 +264,7 @@ vector<pair<int, int> > cutFrame(vector<double>  &Energys, vector<double> & zero
 
 
 vector<pair<int, int > >  cutWavBySil(vector<pair<int, int > > silencePair, WavData& speechAudio){
-	//ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½Ä¶ï¿½ 
+	//µÃµ½ÓïÒôµÄ¶Î 
 	int speechHead = 0; int speechTail;
 	vector<pair<int, int > > speechPair;
 	for(int i = 0; i < silencePair.size();i++){
@@ -277,7 +278,7 @@ vector<pair<int, int > >  cutWavBySil(vector<pair<int, int > > silencePair, WavD
 	return speechPair; 
 } 
 
-/*ï¿½ï¿½ï¿½ï¿½wavï¿½Ä¼ï¿½*/
+/*Éú³ÉwavÎÄ¼þ*/
 void genWav(vector<pair<int, int > > speechPair, WavData& speechAudio){
 	for(int i = 0; i < speechPair.size(); i++){
 		int head = speechPair[i].first;
